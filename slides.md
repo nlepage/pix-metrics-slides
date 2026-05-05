@@ -1,17 +1,9 @@
 ---
 theme: default
-
 title: Collecte de metrics avec Prometheus
-
-# info: |
-#   ## Slidev Starter Template
-#   Presentation slides for developers.
-
-# slide transition: https://sli.dev/guide/animations.html#slide-transitions
 transition: slide-left
-
-# enable Comark Syntax: https://comark.dev/syntax/markdown
 comark: true
+magicMoveDuration: 333
 
 layout: intro
 ---
@@ -31,7 +23,8 @@ layout: intro
 <!--
  - metrics dans DataDog :
    - construits à partir des logs
-   - coûtent cher
+   - ou pas
+   - coûtent un peu cher (surtout selon facteur...)
 -->
 
 ---
@@ -100,14 +93,19 @@ pression_pneu_bar{voiture="Le SUV du voisin", roue="ArG"}
 | `pression_pneu_bar{voiture="Le SUV du voisin", roue="ArG"}` | 2.8    |
 | `pression_pneu_bar{voiture="Le SUV du voisin", roue="ArD"}` | 2.9    |
 
+<!--
+ - cardinalité de la metric = produit cardinalité labels
+ - augmente vite (1 label par container chez Pix)
+-->
+
 ---
 layout: intro
 ---
 
 # Types de metrics
 
- - Gauge
  - Counter
+ - Gauge
  - Histogram
  - Summary
 
@@ -116,6 +114,77 @@ li {
   font-size: 2em;
 }
 </style>
+
+---
+
+# Counter
+
+### Une valeur cumulée qui peut seulement augmenter ou être réinitialisée
+
+Exemples :
+
+- Nombre de kilomètres parcourus par la bagnole
+- Quantité de gazole consommée par la bagnole
+- Nombre d’allers-retours des essuies glaces de la bagnole
+
+Mais aussi :
+
+- Nombre de requêtes HTTP traîtées
+- Nombre de jobs exécutés
+- Nombre de requêtes SQL exécutées
+
+---
+
+<style>
+.slidev-code {
+  --slidev-code-font-size: 18px;
+  --slidev-code-line-height: 24px;
+}
+</style>
+
+# Counter - Collecte dans l’API
+
+````md magic-move
+```js
+import { createCounter } from 'src/shared/infrastructure/metrics/metrics.js';
+
+const readsMetric = createCounter({
+  name: 'lc_reads',
+  help: 'Learning content cache reads',
+  labelNames: ['table', 'cache'],
+});
+```
+```js
+import { createCounter } from 'src/shared/infrastructure/metrics/metrics.js';
+
+const readsMetric = createCounter({
+  name: 'lc_reads',
+  help: 'Learning content cache reads',
+  labelNames: ['table', 'cache'],
+});
+
+// puis :
+
+readsMetric.inc({ table, cache });    // incrémenter de 1
+readsMetric.inc({ table, cache }, n); // incrémenter de n
+```
+```js
+import { createCounter } from 'src/shared/infrastructure/metrics/metrics.js';
+
+const readsMetric = createCounter({
+  name: 'lc_reads',
+  help: 'Learning content cache reads',
+  labelNames: ['table', 'cache'],
+});
+
+// ou bien dans une classe :
+
+this.#readsMetric = readsMetric.labels({ table, cache });
+
+this.#readsMetric.inc();  // incrémenter de 1
+this.#readsMetric.inc(n); // incrémenter de n
+```
+````
 
 ---
 
@@ -137,21 +206,73 @@ Mais aussi :
 
 ---
 
-# Counter
+<style>
+.slidev-code {
+  --slidev-code-font-size: 18px;
+  --slidev-code-line-height: 24px;
+}
+</style>
 
-### Une valeur cumulée qui peut seulement augmenter ou être réinitialisée
+# Gauge - Collecte dans l’API
 
-Exemples :
+````md magic-move
+```js
+import { createGauge } from 'src/shared/infrastructure/metrics/metrics.js';
 
-- Nombre de kilomètres parcourus par la bagnole
-- Quantité de gazole consommée par la bagnole
-- Nombre d’allers-retours des essuies glaces de la bagnole
+const cacheSizeMetric = createGauge({
+  name: 'lc_cachesize',
+  help: 'Learning content cache size',
+  labelNames: ['table', 'cache'],
+});
+```
+```js
+import { createGauge } from 'src/shared/infrastructure/metrics/metrics.js';
 
-Mais aussi :
+const cacheSizeMetric = createGauge({
+  name: 'lc_cachesize',
+  help: 'Learning content cache size',
+  labelNames: ['table', 'cache'],
+});
 
-- Nombre de requêtes HTTP traîtées
-- Nombre de jobs exécutés
-- Nombre de requêtes SQL exécutées
+// puis :
+
+cacheSizeMetric.set({ table, cache }, value); // mettre à jour
+cacheSizeMetric.inc({ table, cache });        // incrémenter
+cacheSizeMetric.dec({ table, cache });        // décrémenter
+cacheSizeMetric.reset({ table, cache });      // réinitialiser
+```
+```js
+import { createGauge } from 'src/shared/infrastructure/metrics/metrics.js';
+
+const cacheSizeMetric = createGauge({
+  name: 'lc_cachesize',
+  help: 'Learning content cache size',
+  labelNames: ['table', 'cache'],
+});
+
+// ou bien dans une classe :
+
+this.#cacheSizeMetric = cacheSizeMetric.labels({ table, cache });
+
+this.#cacheSizeMetric.set(value); // mettre à jour
+this.#cacheSizeMetric.inc();      // incrémenter
+this.#cacheSizeMetric.dec();      // décrémenter
+this.#cacheSizeMetric.reset();    // réinitialiser
+```
+```js
+import { createGauge } from 'src/shared/infrastructure/metrics/metrics.js';
+
+const cacheSizeMetric = createGauge({
+  name: 'lc_cachesize',
+  help: 'Learning content cache size',
+  labelNames: ['table', 'cache'],
+  // ou alors avec une fonction de collecte :
+  collect() {
+    this.set({ table, cache }, cache.size());
+  },
+});
+```
+````
 
 ---
 
@@ -179,13 +300,17 @@ Mais aussi :
 
 Par exemple pour le prix du plein de la bagnole :
 
-- `prix_carburant_litre_euro_count` : Nombre total de pleins effectués
-- `prix_carburant_litre_euro_sum` : Total de l’argent dépensé dans tous les pleins effectués
-- `prix_carburant_litre_euro_bucket` : Répartition des pleins en fonction de leur prix avec le label **le** :
+- `prix_plein_euro_count` : Nombre total de pleins effectués
+- `prix_plein_euro_sum` : Total du prix de tous les pleins effectués
+- `prix_plein_euro_bucket` : Répartition des pleins en fonction de leur prix avec le label **le** :
   - `le="50"` : inférieur ou égal à 50€
   - `le="75"` : inférieur ou égal à 75€
   - `le="100"` : inférieur ou égal à 100€
   - `le="+Inf"` : inférieur ou égal à l’infini
+
+<!--
+- augmentation supplémentaire cardinalité
+-->
 
 ---
 
@@ -196,11 +321,26 @@ Par exemple pour le prix du plein de la bagnole :
 Pour en apprendre plus : https://prometheus.io/docs/practices/histograms/
 
 ---
+layout: intro
+---
+
+# Et OpenTelemetry alors ?
+
+## Ce serait pas mieux d’utiliser un standard ?
+
+<!--
+- Prometheus/OpenTelemetry compatibles (prom_client compatible OpenTelemetry)
+- OpenTelemetry = surensemble (metrics, traces, logs, et context propagation entre signaux)
+- remplacer prom_client par SDK JS OpenTelemetry
+-->
+
+---
 
 # Références
 
  - https://prometheus.io/docs/concepts/data_model/
  - https://prometheus.io/docs/concepts/metric_types/
+ - https://opentelemetry.io/
 
 ---
 layout: cover
@@ -208,4 +348,5 @@ background: /LODGY.webp
 ---
 
 # Merci !
+
 ## Avez-vous des questions ?
