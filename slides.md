@@ -186,6 +186,10 @@ this.#readsMetric.inc(n); // incrémenter de n
 ```
 ````
 
+<!--
+[Exemple dans Grafana](https://grafana.production.pix.digital/explore?schemaVersion=1&panes=%7B%22mey%22:%7B%22datasource%22:%22prometheus%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22pix_api_lc_cachemiss_count%7Binstance%3D%5C%22web-1%5C%22,%20table%3D%5C%22challenges%5C%22,%20cache%3D%5C%22entities%5C%22%7D%22,%22range%22:true,%22instant%22:true,%22datasource%22:%7B%22type%22:%22prometheus%22,%22uid%22:%22prometheus%22%7D,%22editorMode%22:%22builder%22,%22legendFormat%22:%22__auto%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D,%22compact%22:false%7D%7D&orgId=1)
+-->
+
 ---
 
 # Gauge
@@ -274,6 +278,10 @@ const cacheSizeMetric = createGauge({
 ```
 ````
 
+<!--
+[Exemple dans Grafana](https://grafana.production.pix.digital/explore?schemaVersion=1&panes=%7B%22mey%22:%7B%22datasource%22:%22prometheus%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22pix_api_lc_cachesize%7Binstance%3D%5C%22web-1%5C%22,%20table%3D%5C%22challenges%5C%22,%20cache%3D%5C%22entities%5C%22%7D%22,%22range%22:true,%22instant%22:true,%22datasource%22:%7B%22type%22:%22prometheus%22,%22uid%22:%22prometheus%22%7D,%22editorMode%22:%22builder%22,%22legendFormat%22:%22__auto%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D,%22compact%22:false%7D%7D&orgId=1)
+-->
+
 ---
 
 # Histogram
@@ -314,11 +322,130 @@ Par exemple pour le prix du plein de la bagnole :
 
 ---
 
+# Histogram - Collecte dans l’API
+
+````md magic-move
+```js
+import { createHistogram } from 'src/shared/infrastructure/metrics/metrics.js';
+
+const cacheMissMetric = createHistogram({
+  name: 'lc_cachemiss',
+  help: 'Learning content cache miss count',
+  labelNames: ['table', 'cache'],
+});
+```
+```js
+import { createHistogram } from 'src/shared/infrastructure/metrics/metrics.js';
+
+const cacheMissMetric = createHistogram({
+  name: 'lc_cachemiss',
+  help: 'Learning content cache miss count',
+  labelNames: ['table', 'cache'],
+});
+
+// puis
+
+cacheMissMetric.observe({ table, cache }, value); // observer une valeur
+```
+```js
+import { createHistogram } from 'src/shared/infrastructure/metrics/metrics.js';
+
+const cacheMissMetric = createHistogram({
+  name: 'lc_cachemiss',
+  help: 'Learning content cache miss count',
+  labelNames: ['table', 'cache'],
+});
+
+// ou bien dans une classe
+
+this.#cacheMissMetric = cacheMissMetric.labels({ table, cache });
+
+this.#cacheMissMetric.observe(value); // observer une valeur
+```
+````
+
+<!--
+Exemples dans Grafana :
+ - [Nombre d’observations](https://grafana.production.pix.digital/explore?schemaVersion=1&panes=%7B%22djw%22:%7B%22datasource%22:%22prometheus%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22rate%28pix_api_lc_read_count%7Bcache%3D%5C%22entities%5C%22,%20table%3D%5C%22skills%5C%22,%20instance%3D%5C%22web-1%5C%22%7D%5B$__rate_interval%5D%29%22,%22range%22:true,%22instant%22:true,%22datasource%22:%7B%22type%22:%22prometheus%22,%22uid%22:%22prometheus%22%7D,%22editorMode%22:%22builder%22,%22legendFormat%22:%22__auto%22%7D%5D,%22range%22:%7B%22from%22:%22now-24h%22,%22to%22:%22now%22%7D,%22compact%22:false%7D%7D&orgId=1)
+ - [Somme des observations](https://grafana.production.pix.digital/explore?schemaVersion=1&panes=%7B%22djw%22:%7B%22datasource%22:%22prometheus%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22rate%28pix_api_lc_read_sum%7Bcache%3D%5C%22entities%5C%22,%20table%3D%5C%22skills%5C%22,%20instance%3D%5C%22web-1%5C%22%7D%5B$__rate_interval%5D%29%22,%22range%22:true,%22instant%22:true,%22datasource%22:%7B%22type%22:%22prometheus%22,%22uid%22:%22prometheus%22%7D,%22editorMode%22:%22builder%22,%22legendFormat%22:%22__auto%22%7D%5D,%22range%22:%7B%22from%22:%22now-24h%22,%22to%22:%22now%22%7D,%22compact%22:false%7D%7D&orgId=1)
+ - [Buckets](https://grafana.production.pix.digital/explore?schemaVersion=1&panes=%7B%22djw%22:%7B%22datasource%22:%22prometheus%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22rate%28pix_api_lc_read_bucket%7Bcache%3D%5C%22entities%5C%22,%20table%3D%5C%22skills%5C%22,%20instance%3D%5C%22web-1%5C%22%7D%5B$__rate_interval%5D%29%22,%22range%22:true,%22instant%22:true,%22datasource%22:%7B%22type%22:%22prometheus%22,%22uid%22:%22prometheus%22%7D,%22editorMode%22:%22builder%22,%22legendFormat%22:%22__auto%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D,%22compact%22:false%7D%7D&orgId=1)
+-->
+
+---
+
+# Histogram - Collecte dans l’API
+
+````md magic-move
+```js
+import { createHistogram } from 'src/shared/infrastructure/metrics/metrics.js';
+
+const cachePenaltyMetric = createHistogram({
+  name: 'lc_cachepenalty',
+  help: 'Learning content cache penalty',
+  labelNames: ['table', 'cache'],
+});
+```
+```js
+import { createHistogram } from 'src/shared/infrastructure/metrics/metrics.js';
+
+const cachePenaltyMetric = createHistogram({
+  name: 'lc_cachepenalty',
+  help: 'Learning content cache penalty',
+  labelNames: ['table', 'cache'],
+});
+
+// puis (dans une classe)
+
+this.#cachePenaltyMetric = cachePenaltyMetric.labels({ table, cache });
+
+const stopTimer = this.#cachePenaltyMetric.startTimer(value); // démarrer un timer
+```
+```js
+import { createHistogram } from 'src/shared/infrastructure/metrics/metrics.js';
+
+const cachePenaltyMetric = createHistogram({
+  name: 'lc_cachepenalty',
+  help: 'Learning content cache penalty',
+  labelNames: ['table', 'cache'],
+});
+
+// puis (dans une classe)
+
+this.#cachePenaltyMetric = cachePenaltyMetric.labels({ table, cache });
+
+const stopTimer = this.#cachePenaltyMetric.startTimer(value); // démarrer un timer
+
+// puis plus tard
+
+stopTimer(); // arrêter le timer
+```
+````
+
+---
+
 # Summary
 
 ### Comme les histograms mais avec "des **quantiles** configurables caluclés sur une fenêtre de temps glissante"
 
 Pour en apprendre plus : https://prometheus.io/docs/practices/histograms/
+
+---
+
+# Des gotchas ?
+
+ - On ne peut pas changer le type d’une metric (en gardant le même nom)
+
+---
+
+# Mais comment les metrics sont récupérées ?
+
+## ![Schéma](/prometheus1.png)
+
+---
+
+# Mais comment les metrics sont récupérées ?
+
+## ![Schéma](/prometheus2.png)
 
 ---
 layout: intro
@@ -340,7 +467,9 @@ layout: intro
 
  - https://prometheus.io/docs/concepts/data_model/
  - https://prometheus.io/docs/concepts/metric_types/
+ - https://www.npmjs.com/package/prom-client
  - https://opentelemetry.io/
+ - https://www.npmjs.com/package/@opentelemetry/sdk-metrics
 
 ---
 layout: cover
