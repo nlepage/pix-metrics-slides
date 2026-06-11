@@ -10,7 +10,7 @@ layout: intro
 
 # Collecte de metrics avec Prometheus
 
-## Mise en jambe du ICI LA DATE
+## Mise en jambe du 17/06/2026
 
 ---
 layout: intro
