@@ -1,5 +1,6 @@
 ---
 theme: default
+colorSchema: light
 title: Collecte de metrics avec Prometheus
 transition: slide-left
 comark: true
